@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: domus_db
+    environment:
+      POSTGRES_USER: domus_user
+      POSTGRES_PASSWORD: domus_password
+      POSTGRES_DB: domus_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - domus_postgres_data:/var/lib/postgresql/data
+    networks:
+      - domus_network
+
+volumes:
+  domus_postgres_data:
+
+networks:
+  domus_network:
+    driver: bridge
