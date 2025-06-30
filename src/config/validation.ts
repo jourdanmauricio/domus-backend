@@ -16,8 +16,17 @@ export const validationSchema = Joi.object({
   DB_PASSWORD: Joi.string().required(),
   DB_NAME: Joi.string().required(),
 
+  // SMTP Configuration
+  SMTP_HOST: Joi.string().required(),
+  SMTP_PORT: Joi.number().default(587),
+  EMAILS_FROM: Joi.string().email().required(),
+  SMTP_PASSWORD: Joi.string().required(),
+
   // Optional extras
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
+
+  // Frontend URL
+  FRONTEND_URL: Joi.string().required(),
 });

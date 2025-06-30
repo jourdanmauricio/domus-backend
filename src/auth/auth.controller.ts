@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ForgotPasswordDto } from './dto/forgot-passworddto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -24,5 +25,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto.email, loginUserDto.password);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Recuperar contraseña' })
+  @ApiResponse({ status: 200, description: 'Recuperación exitosa' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 }

@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -8,12 +9,16 @@ import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserRole } from './interfaces/jwt-payload.interface';
+import { MailerService } from '@nestjs-modules/mailer';
+import { EmailService } from '../common/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
+    private mailerService: MailerService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -33,7 +38,10 @@ export class AuthService {
   async login(
     email: string,
     password: string,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{
+    access_token: string;
+    user: { id: string; email: string; name: string; roles: UserRole[] };
+  }> {
     const user = await this.userService.findOneByEmail(email);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -43,11 +51,18 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
+      name: user.email,
       roles: user.roles.map((r) => r.name as UserRole),
     };
 
     return {
       access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.email,
+        roles: user.roles.map((r) => r.name as UserRole),
+      },
     };
   }
 
@@ -66,5 +81,20 @@ export class AuthService {
       ...createUserDto,
       password: hashedPassword,
     });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userService.findOneByEmail(email);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const token = this.jwtService.sign({ email });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const url = `${frontendUrl}/recovery-password?token=${token}`;
+
+    await this.emailService.sendRecoveryPassword(email, url);
+
+    return { message: 'Email enviado' };
   }
 }
