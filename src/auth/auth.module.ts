@@ -32,14 +32,5 @@ import { EmailService } from '../common/email.service';
   exports: [JwtAuthModule],
 })
 export class AuthModule {
-  constructor(private configService: ConfigService) {
-    console.log('SMTP Configuration:');
-    console.log('Host:', this.configService.get('SMTP_HOST'));
-    console.log('Port:', this.configService.get('SMTP_PORT'));
-    console.log('User:', this.configService.get('EMAILS_FROM'));
-    console.log(
-      'Password:',
-      this.configService.get('SMTP_PASSWORD') ? '***' : 'NOT SET',
-    );
-  }
+  constructor(private configService: ConfigService) {}
 }

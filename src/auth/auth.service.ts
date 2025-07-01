@@ -12,6 +12,11 @@ import { UserRole } from './interfaces/jwt-payload.interface';
 import { MailerService } from '@nestjs-modules/mailer';
 import { EmailService } from '../common/email.service';
 
+interface RecoveryTokenPayload {
+  sub: string;
+  email: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -89,12 +94,28 @@ export class AuthService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    const token = this.jwtService.sign({ email });
+    const token = this.jwtService.sign({ email, sub: user.id });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const url = `${frontendUrl}/recovery-password?token=${token}`;
 
     await this.emailService.sendRecoveryPassword(email, url);
 
     return { message: 'Email enviado' };
+  }
+
+  async resetPassword(
+    token: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const payload = this.jwtService.verify<RecoveryTokenPayload>(token);
+    const user = await this.userService.findOne(payload.sub);
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    await this.userService.update(user.id, { password });
+
+    return { message: 'Contraseña restablecida' };
   }
 }
