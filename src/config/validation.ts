@@ -29,4 +29,9 @@ export const validationSchema = Joi.object({
 
   // Frontend URL
   FRONTEND_URL: Joi.string().required(),
+
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: Joi.string().required(),
+  CLOUDINARY_API_KEY: Joi.string().required(),
+  CLOUDINARY_API_SECRET: Joi.string().required(),
 });

@@ -20,6 +20,7 @@ import { validationSchema } from './config/validation';
 import { SeederModule } from './seeder/seeder.module';
 import { UserProfileModule } from './user-profile/user-profile.module';
 import { UserProfile } from './user-profile/entities/user-profile.entity';
+import { CloudinaryModule } from './common/services/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { UserProfile } from './user-profile/entities/user-profile.entity';
     RolesModule,
     SeederModule,
     UserProfileModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

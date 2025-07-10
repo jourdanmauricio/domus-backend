@@ -11,6 +11,8 @@ import {
   Body,
   Put,
   Delete,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,6 +32,9 @@ import { Request } from 'express';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UpdateUserProfileDto } from 'src/user-profile/dto/update-user-profile.dto';
 import { UserProfileService } from 'src/user-profile/user-profile.service';
+import { FileUpload } from 'src/common/decorators/file-upload.decorator';
+import { CloudinaryService } from 'src/common/services/cloudinary/cloudinary.service';
+import { AvatarResponseDto } from './dto/avatar-response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -39,6 +44,7 @@ export class UsersController {
   constructor(
     private readonly userService: UserService,
     private readonly userProfileService: UserProfileService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   @Get()
@@ -87,6 +93,46 @@ export class UsersController {
   updateProfile(@Req() req: Request, @Body() dto: UpdateUserProfileDto) {
     const user = req.user as JwtPayload;
     return this.userProfileService.updateByUserId(user.sub, dto);
+  }
+
+  @Post('me/avatar')
+  @FileUpload('avatar')
+  @ApiOperation({ summary: 'Upload user avatar' })
+  @ApiResponse({
+    status: 201,
+    description: 'Avatar uploaded successfully',
+    type: AvatarResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file or file too large' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async uploadAvatar(
+    @Req() req: Request,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<AvatarResponseDto> {
+    const user = req.user as JwtPayload;
+
+    // Subir imagen a Cloudinary
+    if (!file) {
+      throw new BadRequestException('Archivo requerido');
+    }
+
+    const uploadFile = file as { originalname: string; buffer: Buffer };
+    const { originalname, buffer } = uploadFile;
+    const uploadResult = await this.cloudinaryService.uploadProfileImage(
+      { originalname, buffer },
+      user.sub,
+    );
+
+    // Actualizar el perfil del usuario con la nueva URL del avatar
+    await this.userProfileService.updateByUserId(user.sub, {
+      avatarUrl: uploadResult.secure_url,
+    });
+
+    return {
+      message: 'Avatar subido exitosamente',
+      avatarUrl: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+    };
   }
 
   @Put('me/password')
