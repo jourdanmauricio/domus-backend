@@ -2,7 +2,6 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsNumber,
   MaxLength,
   IsLatitude,
   IsLongitude,
@@ -66,20 +65,29 @@ export class CreateAddressDto {
   @IsOptional()
   longitude?: number;
 
+  @ApiPropertyOptional({
+    example: 'Madrid, Calle Mayor 123',
+    description: 'Nomenclador de la dirección',
+    maxLength: 250,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(250)
+  nomenclator?: string;
+
   // En lugar de pasar el objeto City completo, pasamos su ID.
   // El servicio se encargará de buscar y asociar la entidad completa.
   @ApiProperty({
     example: 1,
     description: 'ID de la ciudad (obligatorio)',
   })
-  @IsNumber({}, { message: 'El ID de la ciudad debe ser un número.' })
-  cityId: number;
+  @IsString({ message: 'El ID de la ciudad debe ser un texto.' })
+  cityId: string;
 
-  // Igual que con City, pasamos el ID del código postal.
   @ApiProperty({
-    example: 1,
-    description: 'ID del código postal (obligatorio)',
+    example: '1900',
+    description: 'Código postal (obligatorio)',
   })
-  @IsNumber({}, { message: 'El ID del código postal debe ser un número.' })
-  postalCodeId: number;
+  @IsString({ message: 'El  código postal debe ser un texto.' })
+  postalCode: string;
 }

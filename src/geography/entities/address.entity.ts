@@ -32,6 +32,9 @@ export class Address {
   @Column({ type: 'decimal', precision: 10, scale: 7 })
   longitude?: number; // Longitud para geolocalización
 
+  @Column({ length: 250, nullable: true })
+  nomenclator?: string; // Nomenclador de la dirección
+
   // Relación con Ciudad (obligatoria)
   @ManyToOne(() => City, (city) => city.addresses)
   city: City;

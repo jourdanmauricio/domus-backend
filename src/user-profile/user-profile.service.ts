@@ -117,19 +117,10 @@ export class UserProfileService {
       where: { user: { id: userId } },
     });
 
-    if (dto.address) {
-      await this.addOrUpdateAddressToUserProfile(userId, dto.address);
-    }
+    let updatedProfile: UserProfile;
 
     if (!profile) {
-      const requiredFields = [
-        'firstName',
-        'lastName',
-        'dni',
-        'phone',
-        'gender',
-        'nationality',
-      ];
+      const requiredFields = ['firstName', 'lastName', 'dni', 'phone'];
       const missing = requiredFields.filter((field) => !dto[field]);
       if (missing.length > 0) {
         throw new BadRequestException(
@@ -147,10 +138,22 @@ export class UserProfileService {
         gender: dto.gender!,
         nationality: dto.nationality!,
       };
-      return this.create(createDto);
+      updatedProfile = await this.create(createDto);
+    } else {
+      updatedProfile = await this.update(profile.id, dto);
     }
 
-    return this.update(profile.id, dto);
+    // Manejar la dirección después de asegurar que el perfil existe
+    if (dto.address) {
+      await this.addOrUpdateAddressToUserProfile(userId, dto.address);
+      // Recargar el perfil para obtener la dirección actualizada
+      return this.userProfileRepository.findOne({
+        where: { user: { id: userId } },
+        relations: ['address'],
+      }) as Promise<UserProfile>;
+    }
+
+    return updatedProfile;
   }
 
   async remove(id: string): Promise<void> {
@@ -165,15 +168,15 @@ export class UserProfileService {
     });
     if (!profile) throw new NotFoundException('Profile not found');
 
-    if (profile.address) {
+    if (profile?.address) {
       profile.address = await this.addressService.update(
         profile.address.id,
         dto,
       );
     } else {
-      if (!dto.street || !dto.number || !dto.cityId || !dto.postalCodeId) {
+      if (!dto.street || !dto.number || !dto.cityId || !dto.postalCode) {
         throw new BadRequestException(
-          'Para crear una nueva dirección, los campos street, number, cityId y postalCodeId son obligatorios',
+          'Para crear una nueva dirección, los campos street, number, cityId y postalCode son obligatorios',
         );
       }
 
@@ -185,7 +188,7 @@ export class UserProfileService {
         latitude: dto.latitude,
         longitude: dto.longitude,
         cityId: dto.cityId,
-        postalCodeId: dto.postalCodeId,
+        postalCode: dto.postalCode,
       };
 
       profile.address = await this.addressService.create(createDto);

@@ -25,7 +25,14 @@ export class UserService {
     return this.userRepository.findOne({
       where: { id, isDeleted: false },
       // select: ['id', 'email', 'roles'],
-      relations: ['profile', 'profile.address', 'roles'],
+      relations: [
+        'profile',
+        'profile.address',
+        'profile.address.postalCode',
+        'profile.address.city',
+        'profile.address.city.province',
+        'roles',
+      ],
     });
   }
 
@@ -49,7 +56,12 @@ export class UserService {
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
       where: { isDeleted: false },
-      relations: ['profile', 'profile.address'],
+      relations: [
+        'roles',
+        'profile',
+        'profile.address',
+        'profile.address.postalCode',
+      ],
     });
   }
 

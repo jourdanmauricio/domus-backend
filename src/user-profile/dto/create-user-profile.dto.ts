@@ -53,7 +53,7 @@ export class CreateUserProfileDto {
   })
   @IsOptional()
   @IsDateString()
-  birthDate?: Date;
+  birthDate?: string;
 
   @ApiPropertyOptional({
     example: 'male',

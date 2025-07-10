@@ -23,20 +23,26 @@ export class AddressService {
 
   async create(dto: CreateAddressDto): Promise<Address> {
     // Buscar y validar la ciudad (obligatoria)
-    const city = await this.cityRepository.findOneBy({ id: dto.cityId });
+    const city = await this.cityRepository.findOneBy({
+      id: dto.cityId,
+    });
     if (!city) {
       throw new NotFoundException(`Ciudad con ID ${dto.cityId} no encontrada`);
     }
 
     // Buscar y validar el código postal (obligatorio)
-    const postalCode = await this.postalCodeRepository.findOneBy({
-      id: dto.postalCodeId,
+    let postalCode = await this.postalCodeRepository.findOneBy({
+      code: dto.postalCode,
     });
 
     if (!postalCode) {
-      throw new NotFoundException(
-        `Código postal con ID ${dto.postalCodeId} no encontrado`,
-      );
+      // Crear código postal si no existe
+      const newPostalCode = this.postalCodeRepository.create({
+        code: dto.postalCode,
+        city: city,
+      });
+      await this.postalCodeRepository.save(newPostalCode);
+      postalCode = newPostalCode;
     }
 
     // Validar coherencia entre ciudad y código postal
@@ -68,7 +74,7 @@ export class AddressService {
     // Validar y buscar la ciudad si se proporciona
     let city: City | null = null;
     if (dto.cityId) {
-      city = await this.cityRepository.findOneBy({ id: dto.cityId });
+      city = await this.cityRepository.findOneBy({ id: dto.cityId.toString() });
       if (!city) {
         throw new NotFoundException(
           `Ciudad con ID ${dto.cityId} no encontrada`,
@@ -78,14 +84,18 @@ export class AddressService {
 
     // Validar y buscar el código postal si se proporciona
     let postalCode: PostalCode | null = null;
-    if (dto.postalCodeId) {
+    if (dto.postalCode) {
       postalCode = await this.postalCodeRepository.findOneBy({
-        id: dto.postalCodeId,
+        code: dto.postalCode,
       });
       if (!postalCode) {
-        throw new NotFoundException(
-          `Código postal con ID ${dto.postalCodeId} no encontrado`,
-        );
+        // crear código postal si no existe
+        const newPostalCode = this.postalCodeRepository.create({
+          code: dto.postalCode,
+          city: city || address.city,
+        });
+        await this.postalCodeRepository.save(newPostalCode);
+        postalCode = newPostalCode;
       }
     }
 
@@ -104,6 +114,7 @@ export class AddressService {
       neighborhood: dto.neighborhood,
       latitude: dto.latitude,
       longitude: dto.longitude,
+      nomenclator: dto.nomenclator,
       city: city || address.city,
       postalCode: postalCode || address.postalCode,
     });

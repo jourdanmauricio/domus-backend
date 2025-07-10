@@ -23,7 +23,7 @@ export class UserProfile {
   avatarUrl: string;
 
   @Column({ nullable: true })
-  birthDate: Date;
+  birthDate: string;
 
   @Column({ nullable: true })
   gender: 'male' | 'female' | 'non-binary' | 'other';

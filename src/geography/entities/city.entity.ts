@@ -1,18 +1,12 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
 import { Province } from './province.entity';
 import { PostalCode } from './postal-code.entity';
 import { Address } from './address.entity';
 
 @Entity('cities')
 export class City {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+  id: string;
 
   @Column({ length: 100 })
   name: string;
@@ -29,6 +23,6 @@ export class City {
   @OneToMany(() => PostalCode, (postalCode) => postalCode.city)
   postalCodes: PostalCode[];
 
-  @OneToMany(() => Address, (address) => address.postalCode)
+  @OneToMany(() => Address, (address) => address.city)
   addresses: Address[];
 }
