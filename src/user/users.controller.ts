@@ -111,6 +111,8 @@ export class UsersController {
   ): Promise<AvatarResponseDto> {
     const user = req.user as JwtPayload;
 
+    console.log('me avatar', file);
+
     // Subir imagen a Cloudinary
     if (!file) {
       throw new BadRequestException('Archivo requerido');
