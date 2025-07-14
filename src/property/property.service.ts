@@ -42,42 +42,6 @@ export class PropertyService {
     return savedProperty;
   }
 
-  // ---- Crear propiedad con thumbnail ----
-  async createWithThumbnail(
-    createPropertyDto: CreatePropertyDto,
-    thumbnailFile?: Express.Multer.File,
-  ): Promise<Property> {
-    // 1. Crear la propiedad primero (sin thumbnail)
-    const property = await this.create(createPropertyDto);
-
-    // 2. Si hay archivo de thumbnail, subirlo a Cloudinary
-    if (thumbnailFile) {
-      console.log('Subiendo thumbnail a Cloudinary...');
-      const uploadResult = await this.cloudinaryService.uploadPropertyImage(
-        {
-          originalname: thumbnailFile.originalname,
-          buffer: thumbnailFile.buffer,
-        },
-        property.id,
-        'thumbnail', // userId placeholder (no se usa en uploadPropertyImage)
-      );
-
-      console.log('Resultado de upload:', uploadResult);
-      console.log('URL del thumbnail:', uploadResult.secure_url);
-
-      // 3. Actualizar la propiedad con la URL del thumbnail
-      property.thumbnail = uploadResult.secure_url;
-      console.log('Propiedad antes de guardar:', property);
-
-      const updatedProperty = await this.propertyRepository.save(property);
-      console.log('Propiedad después de guardar:', updatedProperty);
-
-      return updatedProperty;
-    }
-
-    return property;
-  }
-
   // ---- Crear propiedad con thumbnail e imágenes ----
   async createWithImages(
     createPropertyDto: CreatePropertyDto,
