@@ -55,7 +55,7 @@ export class CreateAddressDto {
   })
   @IsLatitude({ message: 'El valor proporcionado no es una latitud válida.' })
   @IsOptional()
-  latitude?: number;
+  latitude?: string | number;
 
   @ApiPropertyOptional({
     example: -3.7038,
@@ -63,7 +63,7 @@ export class CreateAddressDto {
   })
   @IsLongitude({ message: 'El valor proporcionado no es una longitud válida.' })
   @IsOptional()
-  longitude?: number;
+  longitude?: string | number;
 
   @ApiPropertyOptional({
     example: 'Madrid, Calle Mayor 123',

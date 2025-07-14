@@ -131,12 +131,12 @@ export class UserProfileService {
       const createDto: CreateUserProfileDto = {
         ...dto,
         userId,
-        firstName: dto.firstName!,
-        lastName: dto.lastName!,
-        dni: dto.dni!,
-        phone: dto.phone!,
-        gender: dto.gender!,
-        nationality: dto.nationality!,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        dni: dto.dni,
+        phone: dto.phone,
+        gender: dto.gender,
+        nationality: dto.nationality,
       };
       updatedProfile = await this.create(createDto);
     } else {
@@ -150,7 +150,7 @@ export class UserProfileService {
       return this.userProfileRepository.findOne({
         where: { user: { id: userId } },
         relations: ['address'],
-      }) as Promise<UserProfile>;
+      });
     }
 
     return updatedProfile;

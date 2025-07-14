@@ -2,12 +2,12 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToMany,
+  // OneToMany,
   ManyToMany,
   JoinTable,
   OneToOne,
 } from 'typeorm';
-import { Property } from '../../property/entities/property.entity';
+// import { Property } from '../../property/entities/property.entity';
 import { Role } from 'src/roles/entities/role.entity';
 import { UserProfile } from 'src/user-profile/entities/user-profile.entity';
 
@@ -34,8 +34,8 @@ export class User {
   @Column({ nullable: true })
   deletedAt: Date;
 
-  @OneToMany(() => Property, (property) => property.agent)
-  properties: Property[];
+  // @OneToMany(() => Property, (property) => property.agent)
+  // properties: Property[];
 
   @ManyToMany(() => Role)
   @JoinTable({

@@ -29,7 +29,6 @@ import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UpdateUserDto, UpdateUserAdminDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Request } from 'express';
-import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UpdateUserProfileDto } from 'src/user-profile/dto/update-user-profile.dto';
 import { UserProfileService } from 'src/user-profile/user-profile.service';
 import { FileUpload } from 'src/common/decorators/file-upload.decorator';
@@ -61,7 +60,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@Req() request: Request) {
-    const user = request.user as JwtPayload;
+    const user = request.user;
     return this.userService.findOne(user.sub);
   }
 
@@ -91,7 +90,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Profile updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   updateProfile(@Req() req: Request, @Body() dto: UpdateUserProfileDto) {
-    const user = req.user as JwtPayload;
+    const user = req.user;
     return this.userProfileService.updateByUserId(user.sub, dto);
   }
 
@@ -109,7 +108,7 @@ export class UsersController {
     @Req() req: Request,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<AvatarResponseDto> {
-    const user = req.user as JwtPayload;
+    const user = req.user;
 
     console.log('me avatar', file);
 
@@ -145,7 +144,7 @@ export class UsersController {
     @Req() req: Request,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    const user = req.user as JwtPayload;
+    const user = req.user;
     return this.userService.update(user.sub, changePasswordDto, user.roles);
   }
 
@@ -155,7 +154,7 @@ export class UsersController {
   @ApiResponse({ status: 204, description: 'Account deactivated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   deactivateAccount(@Req() req: Request) {
-    const user = req.user as JwtPayload;
+    const user = req.user;
     return this.userService.deactivateAccount(user.sub);
   }
 
@@ -171,7 +170,7 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto | UpdateUserAdminDto,
     @Req() request: Request,
   ) {
-    const user = request.user as JwtPayload;
+    const user = request.user;
 
     // Si es admin, puede usar UpdateUserAdminDto con role
     // Si es usuario regular, solo puede usar UpdateUserDto sin role
