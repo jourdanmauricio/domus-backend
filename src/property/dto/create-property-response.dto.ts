@@ -66,6 +66,16 @@ export class CreatePropertyResponseDto {
   })
   images?: string[];
 
+  @ApiPropertyOptional({
+    description: 'Array de URLs de documentos en Cloudinary',
+    example: [
+      'https://res.cloudinary.com/example/raw/upload/v1234567890/properties/550e8400-e29b-41d4-a716-446655440000/documents/document1.pdf',
+      'https://res.cloudinary.com/example/raw/upload/v1234567890/properties/550e8400-e29b-41d4-a716-446655440000/documents/document2.docx',
+    ],
+    type: [String],
+  })
+  documents?: string[];
+
   @ApiProperty({
     description: 'Fecha de creación',
     example: '2024-01-15T10:30:00.000Z',

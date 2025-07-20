@@ -6,6 +6,7 @@ import { ExcludePasswordInterceptor } from './common/interceptors/exclude-passwo
 import { ValidationErrorInterceptor } from './common/interceptors/validation-error.interceptor';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -102,6 +103,9 @@ async function bootstrap() {
     new ExcludePasswordInterceptor(),
     new ValidationErrorInterceptor(),
   );
+
+  // Aplicar filtro de excepciones global
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   const config = new DocumentBuilder()
     .setTitle('Domus API')

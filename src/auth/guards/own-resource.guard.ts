@@ -28,7 +28,7 @@ export class OwnResourceGuard implements CanActivate {
       return true; // Si no hay decorador, permitir acceso
     }
 
-    const user = request.user as JwtPayload;
+    const user = request.user;
     if (!user) {
       throw new ForbiddenException('Usuario no autenticado');
     }

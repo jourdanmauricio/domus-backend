@@ -10,6 +10,8 @@ import {
   UploadedFiles,
   BadRequestException,
   UseInterceptors,
+  Param,
+  Put,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -27,6 +29,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
+import { UpdatePropertyDto } from './dto/update-property.dto';
 
 @ApiTags('properties')
 @ApiBearerAuth()
@@ -42,20 +45,41 @@ export class PropertiesController {
       [
         { name: 'thumbnail', maxCount: 1 },
         { name: 'images', maxCount: 10 },
+        { name: 'documents', maxCount: 10 },
       ],
       {
         storage: undefined,
-        limits: { fileSize: 5 * 1024 * 1024 },
+        limits: { fileSize: 10 * 1024 * 1024 }, // 10MB para documentos
         fileFilter: (req, file, cb) => {
           if (!file) return cb(null, true);
-          const allowedTypes = [
+
+          // Tipos permitidos para imágenes
+          const allowedImageTypes = [
             'image/jpeg',
             'image/jpg',
             'image/png',
             'image/gif',
             'image/webp',
           ];
-          if (!allowedTypes.includes(file.mimetype)) {
+
+          // Tipos permitidos para documentos
+          const allowedDocumentTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/plain',
+            'text/csv',
+            'application/rtf',
+          ];
+
+          const allAllowedTypes = [
+            ...allowedImageTypes,
+            ...allowedDocumentTypes,
+          ];
+
+          if (!allAllowedTypes.includes(file.mimetype)) {
             return cb(new Error('Tipo de archivo no permitido'), false);
           }
           cb(null, true);
@@ -118,6 +142,15 @@ export class PropertiesController {
           description:
             'Array de imágenes de la propiedad (JPEG, PNG, GIF, WebP) - máximo 10',
         },
+        documents: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description:
+            'Array de documentos de la propiedad (PDF, DOC, DOCX, XLS, XLSX, TXT, CSV, RTF) - máximo 10',
+        },
       },
       required: ['data'],
     },
@@ -128,11 +161,13 @@ export class PropertiesController {
     files?: {
       thumbnail?: Express.Multer.File[];
       images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
     },
   ): Promise<Property> {
     // Extraer archivos del objeto files
     const thumbnailFile = files?.thumbnail?.[0];
     const imageFiles = files?.images || [];
+    const documentFiles = files?.documents || [];
 
     // Validar archivo thumbnail si está presente
     if (thumbnailFile && !thumbnailFile.mimetype.startsWith('image/')) {
@@ -147,6 +182,28 @@ export class PropertiesController {
         if (!file.mimetype.startsWith('image/')) {
           throw new BadRequestException(
             'Todos los archivos de imágenes deben ser imágenes válidas',
+          );
+        }
+      }
+    }
+
+    // Validar archivos de documentos si están presentes
+    if (documentFiles && documentFiles.length > 0) {
+      const allowedDocumentTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'text/csv',
+        'application/rtf',
+      ];
+
+      for (const file of documentFiles) {
+        if (!allowedDocumentTypes.includes(file.mimetype)) {
+          throw new BadRequestException(
+            'Todos los archivos de documentos deben ser documentos válidos (PDF, DOC, DOCX, XLS, XLSX, TXT, CSV, RTF)',
           );
         }
       }
@@ -172,11 +229,12 @@ export class PropertiesController {
       }
     }
 
-    // Usar el método que maneja thumbnail e imágenes
-    return this.propertyService.createWithImages(
+    // Usar el método que maneja thumbnail, imágenes y documentos
+    return this.propertyService.createWithImagesAndDocuments(
       processedDto,
       thumbnailFile,
       imageFiles,
+      documentFiles,
     );
   }
 
@@ -227,5 +285,24 @@ export class PropertiesController {
       maxPrice,
       bedrooms,
     });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener una propiedad por su ID' })
+  @ApiResponse({ status: 200, description: 'Propiedad encontrada' })
+  @ApiResponse({ status: 404, description: 'Propiedad no encontrada' })
+  async findOne(@Param('id') id: string): Promise<Property> {
+    return this.propertyService.findOne(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Actualizar una propiedad por su ID' })
+  @ApiResponse({ status: 200, description: 'Propiedad actualizada' })
+  @ApiResponse({ status: 404, description: 'Propiedad no encontrada' })
+  async update(
+    @Param('id') id: string,
+    @Body() updatePropertyDto: UpdatePropertyDto,
+  ): Promise<Property> {
+    return this.propertyService.update(id, updatePropertyDto);
   }
 }

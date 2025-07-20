@@ -35,6 +35,9 @@ export class Address {
   @Column({ length: 250, nullable: true })
   nomenclator?: string; // Nomenclador de la dirección
 
+  // @Column()
+  // cityId: string;
+
   // Relación con Ciudad (obligatoria)
   @ManyToOne(() => City, (city) => city.addresses)
   city: City;

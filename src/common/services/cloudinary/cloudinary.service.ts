@@ -101,6 +101,52 @@ export class CloudinaryService {
     }
   }
 
+  async uploadDocument(
+    file: { originalname: string; buffer: Buffer },
+    options: CloudinaryUploadOptions = {},
+  ): Promise<CloudinaryUploadResult> {
+    try {
+      this.logger.log(`Subiendo documento: ${file.originalname}`);
+
+      const uploadOptions = {
+        folder: options.folder || 'general',
+        transformation: options.transformation,
+        public_id: options.public_id,
+        overwrite: options.overwrite || false,
+        resource_type: 'raw' as const, // Para documentos
+      };
+
+      const result = await new Promise<CloudinaryUploadResult>(
+        (resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error: unknown, result: unknown) => {
+              if (error) {
+                const errorMessage =
+                  error instanceof Error
+                    ? error.message
+                    : 'Error uploading to Cloudinary';
+                reject(new Error(errorMessage));
+              } else {
+                resolve(result as CloudinaryUploadResult);
+              }
+            },
+          );
+
+          uploadStream.end(file.buffer);
+        },
+      );
+
+      this.logger.log(`Documento subido exitosamente: ${result.public_id}`);
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error al subir documento: ${errorMessage}`);
+      throw error;
+    }
+  }
+
   async deleteImage(publicId: string): Promise<void> {
     try {
       this.logger.log(`Eliminando imagen: ${publicId}`);
@@ -160,6 +206,17 @@ export class CloudinaryService {
     return this.uploadImage(file, {
       folder: `contracts/${contractId}/images`,
       public_id: `contract_${contractId}_${Date.now()}`,
+    });
+  }
+
+  async uploadPropertyDocument(
+    file: { originalname: string; buffer: Buffer },
+    propertyId: string,
+    _userId: string,
+  ): Promise<CloudinaryUploadResult> {
+    return this.uploadDocument(file, {
+      folder: `properties/${propertyId}/documents`,
+      public_id: `property_${propertyId}_doc_${Date.now()}`,
     });
   }
 }

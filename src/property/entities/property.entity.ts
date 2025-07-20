@@ -44,6 +44,9 @@ export class Property {
   @Column('simple-array', { nullable: true })
   images: string[];
 
+  @Column('simple-array', { nullable: true })
+  documents: string[];
+
   @Column({ nullable: true })
   coveredMeters: string;
 

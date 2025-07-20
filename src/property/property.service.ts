@@ -42,16 +42,18 @@ export class PropertyService {
     return savedProperty;
   }
 
-  // ---- Crear propiedad con thumbnail e imágenes ----
-  async createWithImages(
+  // ---- Crear propiedad con thumbnail, imágenes y documentos ----
+  async createWithImagesAndDocuments(
     createPropertyDto: CreatePropertyDto,
     thumbnailFile?: Express.Multer.File,
     imageFiles?: Express.Multer.File[],
+    documentFiles?: Express.Multer.File[],
   ): Promise<Property> {
-    // 1. Crear la propiedad primero (sin imágenes)
+    // 1. Crear la propiedad primero (sin archivos)
     const property = await this.create(createPropertyDto);
 
     const imageUrls: string[] = [];
+    const documentUrls: string[] = [];
 
     // 2. Si hay archivo de thumbnail, subirlo a Cloudinary
     if (thumbnailFile) {
@@ -93,14 +95,47 @@ export class PropertyService {
       }
     }
 
-    // 4. Actualizar la propiedad con las URLs de las imágenes
+    // 4. Si hay archivos de documentos, subirlos a Cloudinary
+    if (documentFiles && documentFiles.length > 0) {
+      console.log(
+        `Subiendo ${documentFiles.length} documentos a Cloudinary...`,
+      );
+
+      for (let i = 0; i < documentFiles.length; i++) {
+        const file = documentFiles[i];
+        console.log(
+          `Subiendo documento ${i + 1}/${documentFiles.length}: ${file.originalname}`,
+        );
+
+        const uploadResult =
+          await this.cloudinaryService.uploadPropertyDocument(
+            {
+              originalname: file.originalname,
+              buffer: file.buffer,
+            },
+            property.id,
+            `document_${i + 1}`, // userId placeholder (no se usa en uploadPropertyDocument)
+          );
+
+        console.log(`Documento ${i + 1} subido:`, uploadResult.secure_url);
+        documentUrls.push(uploadResult.secure_url);
+      }
+    }
+
+    // 5. Actualizar la propiedad con las URLs de las imágenes y documentos
     if (imageUrls.length > 0) {
       property.images = imageUrls;
     }
+    if (documentUrls.length > 0) {
+      property.documents = documentUrls;
+    }
 
-    // 5. Guardar la propiedad actualizada
+    // 6. Guardar la propiedad actualizada
     const updatedProperty = await this.propertyRepository.save(property);
-    console.log('Propiedad guardada con imágenes:', updatedProperty);
+    console.log(
+      'Propiedad guardada con imágenes y documentos:',
+      updatedProperty,
+    );
 
     return updatedProperty;
   }
@@ -143,7 +178,12 @@ export class PropertyService {
   async findOne(id: string): Promise<Property> {
     const property = await this.propertyRepository.findOne({
       where: { id },
-      relations: ['address'],
+      relations: [
+        'address',
+        'address.postalCode',
+        'address.city',
+        'address.city.province',
+      ],
     });
     if (!property) {
       throw new NotFoundException(`Property with ID ${id} not found`);
