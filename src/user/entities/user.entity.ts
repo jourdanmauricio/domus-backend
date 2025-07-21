@@ -46,7 +46,6 @@ export class User {
   roles: Role[];
 
   @OneToOne(() => UserProfile, (profile) => profile.user, {
-    eager: true,
     nullable: true,
   })
   profile: UserProfile;

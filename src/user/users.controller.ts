@@ -59,7 +59,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getProfile(@Req() request: Request) {
+  async getProfile(@Req() request: Request) {
     const user = request.user;
     return this.userService.findOne(user.sub);
   }

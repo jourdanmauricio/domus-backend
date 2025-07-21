@@ -22,18 +22,37 @@ export class UserService {
   ) {}
 
   async findOne(id: string): Promise<User | null> {
-    return this.userRepository.findOne({
-      where: { id, isDeleted: false },
-      // select: ['id', 'email', 'roles'],
-      relations: [
-        'profile',
-        'profile.address',
-        'profile.address.postalCode',
-        'profile.address.city',
-        'profile.address.city.province',
-        'roles',
-      ],
-    });
+    // Usar queryBuilder para evitar producto cartesiano con relaciones anidadas
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.roles', 'roles')
+      .where('user.id = :id', { id })
+      .andWhere('user.isDeleted = :isDeleted', { isDeleted: false })
+      .getOne();
+
+    if (!user) {
+      return null;
+    }
+
+    // Cargar la dirección por separado si existe un perfil
+    if (user.profile) {
+      const profileWithAddress = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('profile.address', 'address')
+        .leftJoinAndSelect('address.city', 'city')
+        .leftJoinAndSelect('city.province', 'province')
+        .where('user.id = :id', { id })
+        .andWhere('user.isDeleted = :isDeleted', { isDeleted: false })
+        .getOne();
+
+      if (profileWithAddress) {
+        user.profile = profileWithAddress.profile;
+      }
+    }
+
+    return user;
   }
 
   async findOneByEmail(email: string): Promise<User | null> {
@@ -56,12 +75,7 @@ export class UserService {
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
       where: { isDeleted: false },
-      relations: [
-        'roles',
-        'profile',
-        'profile.address',
-        'profile.address.postalCode',
-      ],
+      relations: ['roles', 'profile', 'profile.address'],
     });
   }
 

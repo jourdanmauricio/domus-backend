@@ -42,7 +42,6 @@ export class UserProfile {
 
   @OneToOne(() => Address, {
     nullable: true,
-    eager: true, // Opcional: Carga la dirección automáticamente cuando buscas un usuario
   })
   @JoinColumn() // Esto creará una columna 'addressId' en la tabla 'userProfile'
   address: Address;
