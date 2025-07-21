@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Country } from '../entities/country.entity';
 import { Province } from '../entities/province.entity';
 import { City } from '../entities/city.entity';
-import { PostalCode } from '../entities/postal-code.entity';
 import { CreateCityDto } from '../dto/create-city.dto';
 
 @Injectable()
@@ -16,44 +15,41 @@ export class GeographyService {
     private readonly provinceRepository: Repository<Province>,
     @InjectRepository(City)
     private readonly cityRepository: Repository<City>,
-    @InjectRepository(PostalCode)
-    private readonly postalCodeRepository: Repository<PostalCode>,
   ) {}
 
   async findAllCountries(): Promise<Country[]> {
-    return this.countryRepository.find();
+    return this.countryRepository.find({
+      relations: ['provinces'],
+    });
   }
 
   async findAllProvinces(): Promise<Province[]> {
-    return this.provinceRepository.find();
+    return this.provinceRepository.find({
+      relations: ['country', 'cities'],
+    });
   }
 
   async findAllCities(): Promise<City[]> {
-    return this.cityRepository.find();
+    return this.cityRepository.find({
+      relations: ['province', 'province.country'],
+    });
   }
 
   async findProvincesByCountry(countryId: number): Promise<Province[]> {
     return this.provinceRepository.find({
       where: { country: { id: countryId } },
+      relations: ['country', 'cities'],
     });
   }
 
   async findCitiesByProvince(provinceId: string): Promise<City[]> {
     return this.cityRepository.find({
       where: { province: { id: provinceId } },
+      relations: ['province', 'province.country'],
     });
   }
 
-  async findPostalCodesByCity(cityId: string): Promise<PostalCode[]> {
-    return this.postalCodeRepository.find({ where: { city: { id: cityId } } });
-  }
-
-  async createCity(createCityDto: CreateCityDto): Promise<City> {
-    const city = this.cityRepository.create(createCityDto);
-    return this.cityRepository.save(city);
-  }
-
-  async createCityWithPostalCode(dto: CreateCityDto): Promise<City> {
+  async createCity(dto: CreateCityDto): Promise<City> {
     return this.cityRepository.manager.transaction(async (manager) => {
       // 1. Buscar la provincia
       const province = await manager.findOne(Province, {
@@ -77,18 +73,10 @@ export class GeographyService {
 
       const savedCity = await manager.save(city);
 
-      // 3. Crear el código postal
-      const postalCode = manager.create(PostalCode, {
-        code: dto.cp,
-        city: savedCity,
-      });
-
-      await manager.save(postalCode);
-
-      // 4. Retornar la ciudad con sus relaciones
+      // 3. Retornar la ciudad con sus relaciones
       const cityWithRelations = await manager.findOne(City, {
         where: { id: savedCity.id },
-        relations: ['province', 'postalCodes'],
+        relations: ['province'],
       });
 
       if (!cityWithRelations) {

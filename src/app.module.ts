@@ -6,7 +6,6 @@ import { Address } from './geography/entities/address.entity';
 import { City } from './geography/entities/city.entity';
 import { Province } from './geography/entities/province.entity';
 import { Country } from './geography/entities/country.entity';
-import { PostalCode } from './geography/entities/postal-code.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -46,7 +45,6 @@ import { CloudinaryModule } from './common/services/cloudinary/cloudinary.module
           City,
           Province,
           Country,
-          PostalCode,
           Role,
         ],
         synchronize: true,

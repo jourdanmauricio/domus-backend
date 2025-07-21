@@ -178,12 +178,7 @@ export class PropertyService {
   async findOne(id: string): Promise<Property> {
     const property = await this.propertyRepository.findOne({
       where: { id },
-      relations: [
-        'address',
-        'address.postalCode',
-        'address.city',
-        'address.city.province',
-      ],
+      relations: ['address', 'address.city', 'address.city.province'],
     });
     if (!property) {
       throw new NotFoundException(`Property with ID ${id} not found`);
@@ -198,6 +193,126 @@ export class PropertyService {
   ): Promise<Property> {
     const property = await this.findOne(id); // Reutiliza la búsqueda con validación
     Object.assign(property, updatePropertyDto);
+    return this.propertyRepository.save(property);
+  }
+
+  // ---- Actualizar propiedad con thumbnail, imágenes y documentos ----
+  async updateWithThumbnail(
+    id: string,
+    updatePropertyDto: UpdatePropertyDto,
+    thumbnailFile?: Express.Multer.File,
+    imageFiles?: Express.Multer.File[],
+    documentFiles?: Express.Multer.File[],
+  ): Promise<Property> {
+    const property = await this.findOne(id);
+
+    // Crear un objeto con los datos a actualizar
+    const updateData = { ...updatePropertyDto };
+
+    // Si hay archivo de thumbnail, subirlo a Cloudinary
+    if (thumbnailFile) {
+      console.log('Subiendo nuevo thumbnail a Cloudinary...');
+      const uploadResult = await this.cloudinaryService.uploadPropertyImage(
+        {
+          originalname: thumbnailFile.originalname,
+          buffer: thumbnailFile.buffer,
+        },
+        property.id,
+        'thumbnail',
+      );
+
+      console.log('Resultado de upload thumbnail:', uploadResult);
+      updateData.thumbnail = uploadResult.secure_url;
+    }
+
+    // Procesar imágenes: combinar URLs existentes con nuevas imágenes subidas
+    const imageUrls: string[] = [];
+
+    // Si hay URLs existentes en el DTO, agregarlas
+    if (updatePropertyDto.images && Array.isArray(updatePropertyDto.images)) {
+      imageUrls.push(
+        ...updatePropertyDto.images.filter((img) => typeof img === 'string'),
+      );
+    }
+
+    // Si hay archivos de imágenes, subirlos a Cloudinary
+    if (imageFiles && imageFiles.length > 0) {
+      console.log(
+        `Subiendo ${imageFiles.length} nuevas imágenes a Cloudinary...`,
+      );
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        console.log(
+          `Subiendo imagen ${i + 1}/${imageFiles.length}: ${file.originalname}`,
+        );
+
+        const uploadResult = await this.cloudinaryService.uploadPropertyImage(
+          {
+            originalname: file.originalname,
+            buffer: file.buffer,
+          },
+          property.id,
+          `image_${Date.now()}_${i + 1}`, // Usar timestamp para evitar conflictos
+        );
+
+        console.log(`Imagen ${i + 1} subida:`, uploadResult.secure_url);
+        imageUrls.push(uploadResult.secure_url);
+      }
+    }
+
+    // Actualizar el campo images con todas las URLs
+    if (imageUrls.length > 0) {
+      updateData.images = imageUrls;
+    }
+
+    // Procesar documentos: combinar URLs existentes con nuevos documentos subidos
+    const documentUrls: string[] = [];
+
+    // Si hay URLs existentes en el DTO, agregarlas
+    if (
+      updatePropertyDto.documents &&
+      Array.isArray(updatePropertyDto.documents)
+    ) {
+      documentUrls.push(
+        ...updatePropertyDto.documents.filter((doc) => typeof doc === 'string'),
+      );
+    }
+
+    // Si hay archivos de documentos, subirlos a Cloudinary
+    if (documentFiles && documentFiles.length > 0) {
+      console.log(
+        `Subiendo ${documentFiles.length} nuevos documentos a Cloudinary...`,
+      );
+
+      for (let i = 0; i < documentFiles.length; i++) {
+        const file = documentFiles[i];
+        console.log(
+          `Subiendo documento ${i + 1}/${documentFiles.length}: ${file.originalname}`,
+        );
+
+        const uploadResult =
+          await this.cloudinaryService.uploadPropertyDocument(
+            {
+              originalname: file.originalname,
+              buffer: file.buffer,
+            },
+            property.id,
+            `document_${Date.now()}_${i + 1}`, // Usar timestamp para evitar conflictos
+          );
+
+        console.log(`Documento ${i + 1} subido:`, uploadResult.secure_url);
+        documentUrls.push(uploadResult.secure_url);
+      }
+    }
+
+    // Actualizar el campo documents con todas las URLs
+    if (documentUrls.length > 0) {
+      updateData.documents = documentUrls;
+    }
+
+    // Actualizar la propiedad con los datos del DTO
+    Object.assign(property, updateData);
     return this.propertyRepository.save(property);
   }
 

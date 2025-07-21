@@ -3,7 +3,6 @@ import { GeographyService } from './services/geography.service';
 import { Country } from './entities/country.entity';
 import { Province } from './entities/province.entity';
 import { City } from './entities/city.entity';
-import { PostalCode } from './entities/postal-code.entity';
 import { CreateCityDto } from './dto/create-city.dto';
 
 @Controller('geography')
@@ -40,15 +39,8 @@ export class GeographyController {
     return this.geographyService.findCitiesByProvince(provinceId);
   }
 
-  @Get('cities/:cityId/postal-codes')
-  async findPostalCodesByCity(
-    @Param('cityId') cityId: string,
-  ): Promise<PostalCode[]> {
-    return this.geographyService.findPostalCodesByCity(cityId);
-  }
-
   @Post('cities')
   async createCity(@Body() createCityDto: CreateCityDto): Promise<City> {
-    return this.geographyService.createCityWithPostalCode(createCityDto);
+    return this.geographyService.createCity(createCityDto);
   }
 }

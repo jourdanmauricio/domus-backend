@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   ValidateNested,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -137,6 +138,39 @@ export class CreatePropertyDto {
   @IsString()
   @IsOptional()
   ABLIdentifier?: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://res.cloudinary.com/example/image/upload/v123/thumbnail.jpg',
+    description: 'URL del thumbnail de la propiedad',
+  })
+  @IsString()
+  @IsOptional()
+  thumbnail?: string;
+
+  @ApiPropertyOptional({
+    example: [
+      'https://res.cloudinary.com/example/image/upload/v123/image1.jpg',
+      'https://res.cloudinary.com/example/image/upload/v123/image2.jpg',
+    ],
+    description: 'Array de URLs de imágenes de la propiedad',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
+
+  @ApiPropertyOptional({
+    example: [
+      'https://res.cloudinary.com/example/document/upload/v123/document1.pdf',
+      'https://res.cloudinary.com/example/document/upload/v123/document2.xlsx',
+    ],
+    description: 'Array de URLs de documentos de la propiedad',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  documents?: string[];
 
   @ApiPropertyOptional({
     example: 'Administración Central',

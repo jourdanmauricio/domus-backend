@@ -80,7 +80,7 @@ export class UserResponseDto {
           latitude: user.profile.address.latitude,
           longitude: user.profile.address.longitude,
           nomenclator: user.profile.address.nomenclator,
-          cp: user.profile.address.postalCode?.code || '', // Código postal aplanado
+          cp: user.profile.address.postalCode || '', // Código postal como string
           city: {
             id: user.profile.address.city.id,
             name: user.profile.address.city.name,

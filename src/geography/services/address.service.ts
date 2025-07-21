@@ -4,7 +4,6 @@ import { Address } from '../entities/address.entity';
 import { Repository } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { City } from '../entities/city.entity';
-import { PostalCode } from '../entities/postal-code.entity';
 import { CreateAddressDto } from '../dto/create-address.dto';
 import { UpdateAddressDto } from '../dto/update-address.dto';
 
@@ -17,8 +16,6 @@ export class AddressService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(City)
     private readonly cityRepository: Repository<City>,
-    @InjectRepository(PostalCode)
-    private readonly postalCodeRepository: Repository<PostalCode>,
   ) {}
 
   async create(dto: CreateAddressDto): Promise<Address> {
@@ -30,39 +27,17 @@ export class AddressService {
       throw new NotFoundException(`Ciudad con ID ${dto.cityId} no encontrada`);
     }
 
-    // Buscar y validar el código postal (obligatorio)
-    let postalCode = await this.postalCodeRepository.findOneBy({
-      code: dto.postalCode,
-    });
-
-    if (!postalCode) {
-      // Crear código postal si no existe
-      const newPostalCode = this.postalCodeRepository.create({
-        code: dto.postalCode,
-        city: city,
-      });
-      await this.postalCodeRepository.save(newPostalCode);
-      postalCode = newPostalCode;
-    }
-
-    // Validar coherencia entre ciudad y código postal
-    // if (postalCode.city.id !== city.id) {
-    //   throw new BadRequestException(
-    //     `El código postal ${postalCode.code} no pertenece a la ciudad ${city.name}`,
-    //   );
-    // }
-
-    // Crear la dirección con las entidades validadas
+    // Crear la dirección con el código postal como string
     const address = this.addressRepository.create({
       street: dto.street,
       number: dto.number,
       apartment: dto.apartment,
       neighborhood: dto.neighborhood,
+      postalCode: dto.postalCode,
       latitude: dto.latitude ? Number(dto.latitude) : undefined,
       longitude: dto.longitude ? Number(dto.longitude) : undefined,
       nomenclator: dto.nomenclator,
       city: city,
-      postalCode: postalCode,
     });
 
     return this.addressRepository.save(address);
@@ -83,41 +58,17 @@ export class AddressService {
       }
     }
 
-    // Validar y buscar el código postal si se proporciona
-    let postalCode: PostalCode | null = null;
-    if (dto.postalCode) {
-      postalCode = await this.postalCodeRepository.findOneBy({
-        code: dto.postalCode,
-      });
-      if (!postalCode) {
-        // crear código postal si no existe
-        const newPostalCode = this.postalCodeRepository.create({
-          code: dto.postalCode,
-          city: city || address.city,
-        });
-        await this.postalCodeRepository.save(newPostalCode);
-        postalCode = newPostalCode;
-      }
-    }
-
-    // Validar coherencia entre ciudad y código postal
-    // if (city && postalCode && postalCode.city.id !== city.id) {
-    //   throw new BadRequestException(
-    //     `El código postal ${postalCode.code} no pertenece a la ciudad ${city.name}`,
-    //   );
-    // }
-
     // Actualizar solo los campos proporcionados
     Object.assign(address, {
       street: dto.street,
       number: dto.number,
       apartment: dto.apartment,
       neighborhood: dto.neighborhood,
+      postalCode: dto.postalCode,
       latitude: dto.latitude ? Number(dto.latitude) : dto.latitude,
       longitude: dto.longitude ? Number(dto.longitude) : dto.longitude,
       nomenclator: dto.nomenclator,
       city: city || address.city,
-      postalCode: postalCode || address.postalCode,
     });
 
     return this.addressRepository.save(address);

@@ -296,13 +296,215 @@ export class PropertiesController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Actualizar una propiedad por su ID' })
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'images', maxCount: 10 },
+        { name: 'documents', maxCount: 10 },
+      ],
+      {
+        storage: undefined,
+        limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+        fileFilter: (req, file, cb) => {
+          if (!file) return cb(null, true);
+
+          // Tipos permitidos para imágenes
+          const allowedImageTypes = [
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+          ];
+
+          // Tipos permitidos para documentos
+          const allowedDocumentTypes = [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+            'application/vnd.ms-excel', // xls
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+            'application/msword', // doc
+            'text/plain', // txt
+            'text/csv', // csv
+            'application/json', // json
+            'application/xml', // xml
+          ];
+
+          // Verificar si es imagen o documento
+          if (allowedImageTypes.includes(file.mimetype)) {
+            cb(null, true);
+          } else if (allowedDocumentTypes.includes(file.mimetype)) {
+            cb(null, true);
+          } else {
+            return cb(new Error('Tipo de archivo no permitido'), false);
+          }
+        },
+      },
+    ),
+  )
+  @ApiOperation({
+    summary: 'Actualizar una propiedad por su ID (con thumbnail opcional)',
+  })
   @ApiResponse({ status: 200, description: 'Propiedad actualizada' })
   @ApiResponse({ status: 404, description: 'Propiedad no encontrada' })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o archivo no válido',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos' })
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          oneOf: [
+            {
+              type: 'string',
+              description:
+                'JSON string con los datos de la propiedad (para FormData)',
+              example:
+                '{"name":"Casa","description":"...","address":{"street":"..."}}',
+            },
+            {
+              type: 'object',
+              description:
+                'Objeto con los datos de la propiedad (para JSON directo)',
+              example: {
+                name: 'Casa',
+                description: '...',
+                address: { street: '...' },
+              },
+            },
+          ],
+        },
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Imagen thumbnail de la propiedad (JPEG, PNG, GIF, WebP)',
+        },
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description:
+            'Array de imágenes de la propiedad (JPEG, PNG, GIF, WebP) - máximo 10 archivos',
+        },
+        documents: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description:
+            'Array de documentos de la propiedad (PDF, XLSX, DOCX, TXT, CSV, JSON, XML) - máximo 10 archivos',
+        },
+      },
+    },
+  })
   async update(
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
+    @UploadedFiles()
+    files?: {
+      thumbnail?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
   ): Promise<Property> {
-    return this.propertyService.update(id, updatePropertyDto);
+    // Extraer archivos del objeto files
+    const thumbnailFile = files?.thumbnail?.[0];
+    const imageFiles = files?.images;
+    const documentFiles = files?.documents;
+
+    // Validar archivo thumbnail si está presente
+    if (thumbnailFile && !thumbnailFile.mimetype.startsWith('image/')) {
+      throw new BadRequestException(
+        'El archivo thumbnail debe ser una imagen válida',
+      );
+    }
+
+    // Validar archivos de imágenes si están presentes
+    if (imageFiles && imageFiles.length > 0) {
+      for (const file of imageFiles) {
+        if (!file.mimetype.startsWith('image/')) {
+          throw new BadRequestException(
+            'Todos los archivos de imágenes deben ser imágenes válidas',
+          );
+        }
+      }
+    }
+
+    // Validar archivos de documentos si están presentes
+    if (documentFiles && documentFiles.length > 0) {
+      const allowedDocumentTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'text/plain',
+        'text/csv',
+        'application/json',
+        'application/xml',
+      ];
+
+      for (const file of documentFiles) {
+        if (!allowedDocumentTypes.includes(file.mimetype)) {
+          throw new BadRequestException(
+            'Todos los archivos de documentos deben ser documentos válidos (PDF, XLSX, DOCX, TXT, CSV, JSON, XML)',
+          );
+        }
+      }
+    }
+
+    // Procesar el DTO para manejar FormData con JSON string
+    let processedDto = updatePropertyDto;
+
+    if (typeof updatePropertyDto === 'object' && 'data' in updatePropertyDto) {
+      if (typeof updatePropertyDto.data === 'string') {
+        try {
+          const jsonData = JSON.parse(
+            updatePropertyDto.data,
+          ) as UpdatePropertyDto;
+          processedDto = jsonData;
+        } catch (_error) {
+          throw new BadRequestException(
+            'El campo data debe contener un JSON válido',
+          );
+        }
+      } else {
+        processedDto = updatePropertyDto.data;
+      }
+    }
+
+    // Limpiar campos de archivos del DTO para evitar errores de validación
+    if (processedDto.images && Array.isArray(processedDto.images)) {
+      processedDto.images = processedDto.images.filter(
+        (img) => typeof img === 'string',
+      );
+    }
+
+    if (processedDto.documents && Array.isArray(processedDto.documents)) {
+      processedDto.documents = processedDto.documents.filter(
+        (doc) => typeof doc === 'string',
+      );
+    }
+
+    // Usar el método que maneja la actualización con thumbnail, imágenes y documentos
+    return this.propertyService.updateWithThumbnail(
+      id,
+      processedDto,
+      thumbnailFile,
+      imageFiles,
+      documentFiles,
+    );
   }
 }

@@ -88,6 +88,8 @@ export class CreateAddressDto {
     example: '1900',
     description: 'Código postal (obligatorio)',
   })
-  @IsString({ message: 'El  código postal debe ser un texto.' })
+  @IsString({ message: 'El código postal debe ser un texto.' })
+  @IsNotEmpty({ message: 'El código postal no puede estar vacío.' })
+  @MaxLength(10)
   postalCode: string;
 }

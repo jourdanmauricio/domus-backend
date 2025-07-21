@@ -6,7 +6,6 @@ import {
   OneToOne,
 } from 'typeorm';
 import { City } from './city.entity';
-import { PostalCode } from './postal-code.entity';
 import { UserProfile } from 'src/user-profile/entities/user-profile.entity';
 
 @Entity('addresses') // Tabla 'addresses'
@@ -26,6 +25,9 @@ export class Address {
   @Column({ length: 100, nullable: true })
   neighborhood?: string; // Barrio (opcional)
 
+  @Column({ length: 10, nullable: true })
+  postalCode?: string; // Código postal como string
+
   @Column({ type: 'decimal', precision: 10, scale: 7 })
   latitude?: number; // Latitud para geolocalización
 
@@ -35,9 +37,6 @@ export class Address {
   @Column({ length: 250, nullable: true })
   nomenclator?: string; // Nomenclador de la dirección
 
-  // @Column()
-  // cityId: string;
-
   // Relación con Ciudad (obligatoria)
   @ManyToOne(() => City, (city) => city.addresses)
   city: City;
@@ -45,7 +44,4 @@ export class Address {
   // Relación con UserProfile (ej: un usuario puede tener múltiples domicilios)
   @OneToOne(() => UserProfile, (userProfile) => userProfile.address)
   userProfile: UserProfile;
-
-  @ManyToOne(() => PostalCode, (postalCode) => postalCode.addresses)
-  postalCode: PostalCode;
 }
