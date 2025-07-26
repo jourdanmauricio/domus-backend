@@ -71,55 +71,62 @@ export class PropertyService {
       property.thumbnail = uploadResult.secure_url;
     }
 
-    // 3. Si hay archivos de imágenes, subirlos a Cloudinary
+    // 3. Si hay archivos de imágenes, subirlos a Cloudinary en paralelo
     if (imageFiles && imageFiles.length > 0) {
-      console.log(`Subiendo ${imageFiles.length} imágenes a Cloudinary...`);
+      console.log(
+        `Subiendo ${imageFiles.length} imágenes a Cloudinary en paralelo...`,
+      );
 
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i];
+      const uploadPromises = imageFiles.map((file, index) => {
         console.log(
-          `Subiendo imagen ${i + 1}/${imageFiles.length}: ${file.originalname}`,
+          `Preparando imagen ${index + 1}/${imageFiles.length}: ${file.originalname}`,
         );
 
-        const uploadResult = await this.cloudinaryService.uploadPropertyImage(
+        return this.cloudinaryService.uploadPropertyImage(
           {
             originalname: file.originalname,
             buffer: file.buffer,
           },
           property.id,
-          `image_${i + 1}`, // userId placeholder (no se usa en uploadPropertyImage)
+          `image_${Date.now()}_${index + 1}`,
         );
+      });
 
-        console.log(`Imagen ${i + 1} subida:`, uploadResult.secure_url);
-        imageUrls.push(uploadResult.secure_url);
-      }
+      const uploadResults = await Promise.all(uploadPromises);
+
+      uploadResults.forEach((result, index) => {
+        console.log(`Imagen ${index + 1} subida:`, result.secure_url);
+        imageUrls.push(result.secure_url);
+      });
     }
 
-    // 4. Si hay archivos de documentos, subirlos a Cloudinary
+    // 4. Si hay archivos de documentos, subirlos a Cloudinary en paralelo
     if (documentFiles && documentFiles.length > 0) {
       console.log(
-        `Subiendo ${documentFiles.length} documentos a Cloudinary...`,
+        `Subiendo ${documentFiles.length} documentos a Cloudinary en paralelo...`,
       );
 
-      for (let i = 0; i < documentFiles.length; i++) {
-        const file = documentFiles[i];
+      const uploadPromises = documentFiles.map((file, index) => {
         console.log(
-          `Subiendo documento ${i + 1}/${documentFiles.length}: ${file.originalname}`,
+          `Preparando documento ${index + 1}/${documentFiles.length}: ${file.originalname}`,
         );
 
-        const uploadResult =
-          await this.cloudinaryService.uploadPropertyDocument(
-            {
-              originalname: file.originalname,
-              buffer: file.buffer,
-            },
-            property.id,
-            `document_${i + 1}`, // userId placeholder (no se usa en uploadPropertyDocument)
-          );
+        return this.cloudinaryService.uploadPropertyDocument(
+          {
+            originalname: file.originalname,
+            buffer: file.buffer,
+          },
+          property.id,
+          `document_${Date.now()}_${index + 1}`,
+        );
+      });
 
-        console.log(`Documento ${i + 1} subido:`, uploadResult.secure_url);
-        documentUrls.push(uploadResult.secure_url);
-      }
+      const uploadResults = await Promise.all(uploadPromises);
+
+      uploadResults.forEach((result, index) => {
+        console.log(`Documento ${index + 1} subido:`, result.secure_url);
+        documentUrls.push(result.secure_url);
+      });
     }
 
     // 5. Actualizar la propiedad con las URLs de las imágenes y documentos
@@ -317,8 +324,22 @@ export class PropertyService {
   }
 
   // ---- Eliminar propiedad ----
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const property = await this.findOne(id);
+
+    const resurces = await this.cloudinaryService.getPropertyImages(id);
+
+    for (const resurce of resurces) {
+      await this.cloudinaryService.deletePropertyImage(
+        resurce.public_id,
+        resurce.resource_type,
+      );
+    }
+
+    await this.cloudinaryService.deleteFolderAndSubfolders(`properties/${id}`);
+
     await this.propertyRepository.remove(property);
+
+    return { message: 'Propiedad eliminada correctamente' };
   }
 }

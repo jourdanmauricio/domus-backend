@@ -2,16 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, ConfigOptions } from 'cloudinary';
 
-// Declaración de tipo para cloudinary
-// declare const cloudinary: {
-//   config: (config: any) => void;
-//   uploader: {
-//     upload_stream: (options: any, callback: (error: any, result: any) => void) => any;
-//     destroy: (publicId: string) => Promise<any>;
-//   };
-//   url: (publicId: string, options: any) => string;
-// };
-
 export interface CloudinaryUploadResult {
   public_id: string;
   secure_url: string;
@@ -20,6 +10,30 @@ export interface CloudinaryUploadResult {
   format: string;
   resource_type: string;
   created_at: string;
+}
+
+interface CloudinaryResource {
+  public_id: string;
+  format: string;
+  version: number;
+  resource_type: string;
+  type: string;
+  created_at: string;
+  bytes: number;
+  width: number;
+  height: number;
+  url: string;
+  secure_url: string;
+  // Agrega otras propiedades según lo que devuelva Cloudinary
+}
+
+interface CloudinaryFolder {
+  name: string;
+  path: string;
+}
+
+interface SubFoldersResponse {
+  folders: CloudinaryFolder[];
 }
 
 export interface CloudinaryUploadOptions {
@@ -54,6 +68,38 @@ export class CloudinaryService {
     };
 
     cloudinary.config(configOptions);
+  }
+
+  async getResources(
+    prefix: string,
+    type: string,
+  ): Promise<CloudinaryResource[]> {
+    return new Promise((resolve, reject) => {
+      void cloudinary.api.resources(
+        {
+          type: 'upload',
+          prefix: prefix, // Usamos el parámetro prefix que recibe la función
+          // resource_type: 'auto',
+          resource_type: type,
+          max_results: 100,
+          delimiter: '/', // Permite navegar por subcarpetas
+        },
+        (error: any, result: any) => {
+          if (error) {
+            console.error(error);
+            reject(new Error(String(error)));
+          } else {
+            const resources =
+              result && typeof result === 'object' && 'resources' in result
+                ? (Object.values(
+                    result as Record<string, unknown>,
+                  )[0] as CloudinaryResource[])
+                : [];
+            resolve(resources);
+          }
+        },
+      );
+    });
   }
 
   async uploadImage(
@@ -147,11 +193,13 @@ export class CloudinaryService {
     }
   }
 
-  async deleteImage(publicId: string): Promise<void> {
+  async deleteResource(publicId: string, resourceType: string): Promise<void> {
     try {
       this.logger.log(`Eliminando imagen: ${publicId}`);
 
-      await cloudinary.uploader.destroy(publicId);
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType,
+      });
 
       this.logger.log(`Imagen eliminada exitosamente: ${publicId}`);
     } catch (error) {
@@ -218,5 +266,57 @@ export class CloudinaryService {
       folder: `properties/${propertyId}/documents`,
       public_id: `property_${propertyId}_doc_${Date.now()}`,
     });
+  }
+
+  async deletePropertyImage(
+    publicId: string,
+    resourceType: string,
+  ): Promise<void> {
+    await this.deleteResource(publicId, resourceType);
+  }
+
+  async getPropertyImages(idProperty: string): Promise<CloudinaryResource[]> {
+    try {
+      const documents = await this.getResources(
+        `properties/${idProperty}/documents`,
+        'raw',
+      );
+
+      const images = await this.getResources(
+        `properties/${idProperty}/images`,
+        '',
+      );
+
+      const resources = [...documents, ...images];
+
+      return resources;
+    } catch (error) {
+      console.error('Error al obtener recursos:', error);
+      return [];
+    }
+  }
+
+  async deleteFolderAndSubfolders(folderPath: string): Promise<void> {
+    try {
+      // Obtener subcarpetas con tipo explícito
+      const result = (await cloudinary.api.sub_folders(
+        folderPath,
+      )) as SubFoldersResponse;
+
+      // Eliminar subcarpetas recursivamente
+      for (const folder of result.folders) {
+        await this.deleteFolderAndSubfolders(`${folderPath}/${folder.name}`);
+      }
+
+      // Eliminar carpeta principal
+      await cloudinary.api.delete_folder(folderPath);
+    } catch (error) {
+      const err = error as Error;
+      if (err.message.includes('No such folder')) {
+        console.warn(`⚠️ La carpeta ${folderPath} no existe`);
+      } else {
+        throw new Error(`Error al eliminar carpeta: ${err.message}`);
+      }
+    }
   }
 }

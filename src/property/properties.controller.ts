@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   Param,
   Put,
+  Delete,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -44,12 +45,12 @@ export class PropertiesController {
     FileFieldsInterceptor(
       [
         { name: 'thumbnail', maxCount: 1 },
-        { name: 'images', maxCount: 10 },
-        { name: 'documents', maxCount: 10 },
+        { name: 'images', maxCount: 50 },
+        { name: 'documents', maxCount: 50 },
       ],
       {
         storage: undefined,
-        limits: { fileSize: 10 * 1024 * 1024 }, // 10MB para documentos
+        limits: { fileSize: 50 * 1024 * 1024 }, // 50MB para documentos
         fileFilter: (req, file, cb) => {
           if (!file) return cb(null, true);
 
@@ -506,5 +507,17 @@ export class PropertiesController {
       imageFiles,
       documentFiles,
     );
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Eliminar una propiedad por su ID' })
+  @ApiResponse({ status: 200, description: 'Propiedad eliminada' })
+  @ApiResponse({ status: 404, description: 'Propiedad no encontrada' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permisos' })
+  async delete(@Param('id') id: string): Promise<{ message: string }> {
+    return this.propertyService.remove(id);
   }
 }
